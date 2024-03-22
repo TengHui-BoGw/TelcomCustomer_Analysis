@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多个图表示例</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+</head>
+<body>
+    <!-- 折线图容器 -->
+    <div id="line_chart" style="width: 200px; height: 150px;float: left;"></div>
+    <!-- 渲染折线图 -->
+    {{ line_chart|safe }}
+    <br>
+    <!-- 散点图容器 -->
+    <div id="scatter_chart" style="width: 200px; height: 150px;float: right;"></div>
+    <!-- 渲染散点图 -->
+    {{ scatter_chart|safe }}
+    <!-- 返回主页链接 -->
+    <p><a href="{{ host }}">返回主页</a></p>
+</body>
+</html>

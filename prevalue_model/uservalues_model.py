@@ -281,11 +281,11 @@ class prevalue_model:
         pass
 
     def run(self):
-        # self.init_model()
+        self.init_model()
         # self.sfs(cv=5)
         # self.para_adjustment(score='mse',n_trials=100)
         # self.lazy_re()
-        self.learning_curve_show(score='mse')
+        # self.learning_curve_show(score='mse')
 
 
 def init_models():

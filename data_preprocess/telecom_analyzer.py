@@ -1,19 +1,15 @@
-import ast
-
 import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.metrics import calinski_harabasz_score
-
 from base_utils import *
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity, FactorAnalyzer, calculate_kmo
 import plotly.express as px
-# plt.rcParams["font.sans-serif"] = ["SimHei"] #设置字体
-# 设置字体为支持负号的字体，比如 DejaVu Sans
-plt.rcParams['font.family'] = 'DejaVu Sans'
+plt.rcParams["font.sans-serif"] = ["SimHei"] #设置字体
+plt.rcParams['axes.unicode_minus']=False#用来正常显示负号
 
 
 class analyzer:
@@ -40,7 +36,7 @@ class analyzer:
             }
         df = data['userinfo'].merge(data['phoneinfo'],on='user_id').merge(data['serviceuseageinfo'],on='user_id')
         df = df.drop(columns='user_id')
-        df.to_csv(r'E:\课程作业\毕设\基于机器学习的电信用户价值分析与预测\clean.csv',index = False)
+        # df.to_csv(r'E:\课程作业\毕设\基于机器学习的电信用户价值分析与预测\clean.csv',index = False)
         return df
 
     def load_mysql(self):
@@ -152,12 +148,7 @@ class analyzer:
                 v['incomplete_minutes_PVC'] = outliers_iqr(v['incomplete_minutes_PVC'],False)
                 v['callcounts_NPVC'] = outliers_iqr(v['callcounts_NPVC'],False)
                 v['drop_callcounts'] = outliers_iqr(v['drop_callcounts'],False)
-                v['total_callcounts_lifecycle'] = outliers_iqr(v['total_callcounts_lifecycle'],False)
-                v['total_useminutes_lifecycle'] = outliers_iqr(v['total_useminutes_lifecycle'],False)
-                v['totalminutes_billadjust'] = outliers_iqr(v['totalminutes_billadjust'],False)
-                v['callcounts_billadjust'] = outliers_iqr(v['callcounts_billadjust'],False)
-                v.loc[v['avg_useminutes_before_sixmonth'] < 0, 'avg_useminutes_before_sixmonth'] = round(v['avg_useminutes_before_sixmonth'].mean())
-                v.loc[v['avg_callcounts_before_sixmonth']<0,'avg_callcounts_before_sixmonth'] = round(v['avg_callcounts_before_sixmonth'].mean())
+
             # print(v.describe().loc['count'])
             v.to_csv(rf'../data/{k}.csv',index=False)
         return data
@@ -215,14 +206,15 @@ class analyzer:
         phoneinfo_cols = ['dualband_capability', 'phoneprice', 'phonenetwork', 'newphoneuser', 'phone_usedays']
         serviceuseage_cols = [col for col in self.data.columns.values if
                               col not in userinfo_cols and col not in phoneinfo_cols]
-        factor_analyzer_cols = list()
-        for col in serviceuseage_cols:
-            if 'billadjust' in col or 'avg' in col or 'lifecycle' in col:
-                continue
-            factor_analyzer_cols.append(col)
-        factor_analyzer_cols.remove('user_values')
-        factor_analyzer_cols.remove('buzy_callcounts')
-        factor_data = self.data[factor_analyzer_cols]
+        serviceuseage_cols.remove('user_values')
+        # factor_analyzer_cols = list()
+        # for col in serviceuseage_cols:
+        #     if 'billadjust' in col or 'avg' in col or 'lifecycle' in col:
+        #         continue
+        #     factor_analyzer_cols.append(col)
+        # factor_analyzer_cols.remove('buzy_callcounts')
+        # factor_analyzer_cols.remove('user_values')
+        factor_data = self.data[serviceuseage_cols]
         if action=='check_data':
             kmo_all, kmo_model = calculate_kmo(factor_data)
             chi_square_value, p_value = calculate_bartlett_sphericity(factor_data)
@@ -254,7 +246,7 @@ class analyzer:
                 print(f"前 {i + 1} 个因子累计方差解释率：{factor_var[1][i]}")
             print("\n总方差：")
             print(f"总方差：{factor_var[2]}")
-            dt2 = pd.DataFrame(fa.loadings_, index=factor_analyzer_cols,columns=[ f'Factor{num}'for num in range(number)])
+            dt2 = pd.DataFrame(fa.loadings_, index=serviceuseage_cols,columns=[ f'Factor{num}'for num in range(number)])
             plt.figure(figsize=(10, 8))
             ax = sns.heatmap(dt2, annot=True, cmap='BuPu')  # 这个cmap是指颜色区间，BuPu是一种颜色的范围，大致是由灰变紫
             plt.show()
@@ -277,7 +269,6 @@ class analyzer:
             return label_levels
 
         def get_value_level(value):
-
             if value < one_level:
                 value_level = 1
             elif value >= one_level and value < two_level:
@@ -300,12 +291,15 @@ class analyzer:
         #     print(np.mean(a[fa]))
         #     print(np.mean(b[fa]))
         #     print()
-        # self.show_bar(dim_data,'totalemployed_months','Factor3')
+        # self.show_bar(dim_data,'phone_usedays_level','Factor1')
+        # x_labels = 'phone_usedays_level'
+        # self.show_percent(dim_data,x=x_labels,hue='value_level')
+        self.show_scatter(dim_data,x='adults_numbers_family',y='employed_level',hue='value_level')
 
-        x_labels = 'credit_rating'
-        self.show_percent(dim_data,x=x_labels,hue='value_level')
-        # self.show_scatter(dim_data,x='credit_rating',y='expect_income',z='employed_level',hue='value_level')
-        # sns.scatterplot(data = dim_data,x='phone_usedays',y='phoneprice_level',hue='value_level')
+        # sns.scatterplot(data = dim_data,x='phone_usedays',y='phoneprice',hue='value_level')
+        # plt.xlabel('手机使用天数')
+        # plt.ylabel('手机价格')
+        # plt.legend(title='用户价值', loc='upper left')
         # plt.show()
 
     def kmeans_cluster(self):
@@ -313,7 +307,7 @@ class analyzer:
         factors_col = [f'Factor{x+1}' for x in range(0,5)]
         factors_col.append('user_values')
         cluster_data = clu_data[factors_col]
-        cluster_data = StandardScaler().fit_transform(cluster_data)
+        # cluster_data = StandardScaler().fit_transform(cluster_data)
         kmeans = KMeans(n_clusters=3,random_state=42)  # 指定聚类数目
         kmeans.fit(cluster_data)
         score = calinski_harabasz_score(cluster_data, kmeans.labels_)
@@ -321,7 +315,7 @@ class analyzer:
         self.data['kmeans_label'] = kmeans.labels_ + 1
         print(self.data['kmeans_label'].value_counts())
         a = self.data.groupby('kmeans_label')['user_values'].apply(lambda x:np.mean(x)).reset_index()
-        self.tele_analyzer.show_bar(a,'kmeans_label','user_values')
+        self.show_bar(a,'kmeans_label','user_values')
         for center in kmeans.cluster_centers_:
             print([round(x,4) for x in center])
 
@@ -330,6 +324,8 @@ class analyzer:
         ax = sns.barplot(data=show_df, x=x, y=y)
         for index, row in show_df.iterrows():
             ax.text(row[x]-1, row[y], row[y], color='black', ha='center')
+        plt.xlabel('手机使用天数(半年)')
+        plt.ylabel('通话需求系数')
         plt.show()
 
     def show_percent(self,data, x, hue):
@@ -378,15 +374,19 @@ class analyzer:
         ax = sns.lineplot(data=show_df, x=x_label, y='percent', hue=hue, estimator=None)
         for index, row in show_df.iterrows():
             ax.text(row[x_label], row['percent'], row['percent'], color='black', ha='center')
+        # plt.xlabel('用户在职年限(1年)')
+        plt.xlabel('手机使用天数(半年)')
+        plt.ylabel('用户价值占比(%)')
+        plt.legend(title='用户价值', loc='upper left')
         plt.show()
 
     def show_scatter(self,data,hue,x=None,y=None,z=None):
         if z is None:
             group_list = [x, y]
-            three_D = True
+            three_D = False
         else:
             group_list = [x,y,z]
-            three_D = False
+            three_D = True
         grouped = data.groupby(group_list)[hue].value_counts(normalize=True).unstack().reset_index()
         hue_values = data[hue].unique()
         rename_dic ={}
@@ -403,6 +403,9 @@ class analyzer:
             ax.set_zlabel(z)
         else:
             sns.scatterplot(data=grouped,x=x,y=y,size=list(rename_dic.values())[-1],alpha=0.4, edgecolors='w')
+        plt.xlabel('家庭成人数量')
+        plt.ylabel('用户在职年限')
+        plt.legend(title='用户价值占比', loc='upper left')
         plt.show()
 
 
@@ -415,8 +418,8 @@ if __name__ == '__main__':
     """
         相关性分析
     """
-    tele_analyzer.corr_analyzer()
-    f
+    # tele_analyzer.corr_analyzer()
+
     """
         因子分析   
         check_data：检查数据是否适合因子分析
@@ -424,6 +427,7 @@ if __name__ == '__main__':
         get_info 获取因子分解结果 
         get_data 生成因子分数
     """
+
     # tele_analyzer.factor_analyzer(action='get_info')
 
     """

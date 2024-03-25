@@ -39,7 +39,6 @@ def create_table():
     	roaming_callcounts INT,
     	useminutes_percentchange_before_threemonth INT,
     	cost_percentchange_before_threemonth INT,
-    	buzy_callcounts INT,
     	miss_callcounts INT,
     	try_usedata_counts INT,
     	answercounts INT,
@@ -53,19 +52,7 @@ def create_table():
     	drop_callcounts INT,
     	forward_callcounts INT,
     	wait_callcounts INT,
-    	user_spend_limit INT,
-    	total_callcounts_lifecycle INT,
-    	total_useminutes_lifecycle INT,
-    	totalcost_lifecycle INT,
-    	totalcost_billadjust INT,
-    	totalminutes_billadjust INT,
-    	callcounts_billadjust INT,
-    	avg_useminutes_monthly INT,
-    	callcounts_monthly INT,
-    	avg_useminutes_before_threemonth INT,
-    	avg_callcounts_before_threemonth INT,
-    	avg_useminutes_before_sixmonth INT,
-    	avg_callcounts_before_sixmonth INT
+    	user_spend_limit INT
     	)
         """
     sql_list = list()
@@ -101,16 +88,13 @@ def load_csv2mysql():
     user_infofields = ['user_id','region','marriage_counts','adults_numbers_family','expect_income','has_creditcard',
                      'totalemployed_months','activeusers_family','credit_rating']
     phone_infofields = ['user_id','dualband_capability','phoneprice','phonenetwork','newphoneuser','phone_usedays']
+
     service_useageinfofields =['user_id','user_values', 'useminutes', 'over_useminutes', 'over_cost', 'voicecost', 'overdata_cost',
                             'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
-                            'cost_percentchange_before_threemonth', 'buzy_callcounts', 'miss_callcounts', 'try_usedata_counts',
+                            'cost_percentchange_before_threemonth', 'miss_callcounts', 'try_usedata_counts',
                             'answercounts', 'complete_usedata_counts', 'customerservice_callcounts', 'customerservice_useminutes',
                             'conferencecall_counts', 'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
-                            'drop_callcounts', 'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
-                            'total_callcounts_lifecycle', 'total_useminutes_lifecycle', 'totalcost_lifecycle',
-                            'totalcost_billadjust', 'totalminutes_billadjust', 'callcounts_billadjust', 'avg_useminutes_monthly',
-                            'callcounts_monthly', 'avg_useminutes_before_threemonth', 'avg_callcounts_before_threemonth',
-                            'avg_useminutes_before_sixmonth', 'avg_callcounts_before_sixmonth']
+                            'drop_callcounts', 'forward_callcounts', 'wait_callcounts', 'user_spend_limit']
     userinfo_data = df[user_infofields]
     phoneinfo_data = df[phone_infofields]
     serviceuseage_data = df[service_useageinfofields]
@@ -136,8 +120,7 @@ def load_csv2mysql():
             INSERT INTO service_useage_info({','.join(service_useageinfofields)}) 
                         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                                 %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                                %s, %s, %s, %s, %s, %s, %s)
+                                %s, %s, %s, %s)
             """
     sqldata_list = list()
     sqldata_list.append((insert_userinfo,load_userinfodata))
@@ -154,6 +137,5 @@ def load_csv2mysql():
     finally:
         conn.close()
 if __name__ == '__main__':
-    pass
-    # create_table()
-    # load_csv2mysql()
+    create_table()
+    load_csv2mysql()

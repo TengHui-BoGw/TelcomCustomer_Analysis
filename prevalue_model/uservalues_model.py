@@ -47,23 +47,23 @@ class prevalue_model:
 
 
     def init_model(self):
+        print(self.data['user_values'].describe())
         xgb = xgboost.XGBRegressor(random_state=30)
+        xgb_params = {'n_estimators': 131, 'max_depth': 8, 'min_child_weight': 8}
+        # xgb_params = {'n_estimators': 61, 'max_depth': 12, 'min_child_weight': 9, 'random_state': 30}
+        xgb.set_params(**xgb_params)
         target = self.data['user_values']
-        del_cols = ['user_values']
-        # for col in self.data.columns.values:
-        #     if 'billadjust' in col or 'avg' in col or 'lifecycle' in col:
-        #         del_cols.append(col)
-        # train_data = self.data.drop(columns = del_cols)
-        xgb_feas = ['marriage_counts', 'adults_numbers_family', 'expect_income',
-                    'has_creditcard', 'totalemployed_months', 'activeusers_family',
-                    'dualband_capability', 'phonenetwork', 'newphoneuser', 'phone_usedays',
+        xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
+                    'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
-                    'roaming_callcounts', 'cost_percentchange_before_threemonth',
-                    'try_usedata_counts', 'complete_usedata_counts',
-                    'customerservice_callcounts', 'incomplete_minutes_PVC',
-                    'forward_callcounts', 'user_spend_limit', 'total_useminutes_lifecycle',
-                    'totalcost_lifecycle', 'value_level']
+                    'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
+                    'cost_percentchange_before_threemonth', 'complete_usedata_counts',
+                    'customerservice_callcounts', 'customerservice_useminutes',
+                    'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
+                    'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
+                    'value_level']
         train_data = self.data[xgb_feas]
+        # train_data = self.data.drop(columns = 'user_values')
         scorer1 = make_scorer(mean_squared_error)
         scorer2 = make_scorer(r2_score)
         score_name1 = '均方根误差'
@@ -74,7 +74,6 @@ class prevalue_model:
         print(f"训练集{score_name1} {np.mean(np.sqrt(scores1['train_score']))}|测试集{score_name1} {np.mean(np.sqrt(scores1['test_score']))}")
         print(f"训练集{score_name2} {np.mean(scores2['train_score'])}|测试集{score_name2} {np.mean(scores2['test_score'])}")
         print(datetime.datetime.now())
-
 
         # xgb.fit(train_data, target)
         # importance = xgb.feature_importances_
@@ -90,20 +89,18 @@ class prevalue_model:
         #     feascore.append(importance[indices[t]])
 
     def para_adjustment(self, score,n_trials):
-        xgb_params = {'n_estimators': 93, 'max_depth': 11, 'min_child_weight': 4, 'random_state': 30,
-                      'subsample': 0.976057563697568, 'colsample_bytree': 0.910170458498438,
-                      'learning_rate': 0.09932554574732755}
         model = xgboost.XGBRegressor()
-        model.set_params(**xgb_params)
-        xgb_feas = ['marriage_counts', 'adults_numbers_family', 'expect_income',
-                    'has_creditcard', 'totalemployed_months', 'activeusers_family',
-                    'dualband_capability', 'phonenetwork', 'newphoneuser', 'phone_usedays',
+        # xgb_params = {'n_estimators': 61, 'max_depth': 12, 'min_child_weight': 9, 'random_state': 30}
+        # model.set_params(**xgb_params)
+        xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
+                    'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
-                    'roaming_callcounts', 'cost_percentchange_before_threemonth',
-                    'try_usedata_counts', 'complete_usedata_counts',
-                    'customerservice_callcounts', 'incomplete_minutes_PVC',
-                    'forward_callcounts', 'user_spend_limit', 'total_useminutes_lifecycle',
-                    'totalcost_lifecycle', 'value_level']
+                    'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
+                    'cost_percentchange_before_threemonth', 'complete_usedata_counts',
+                    'customerservice_callcounts', 'customerservice_useminutes',
+                    'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
+                    'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
+                    'value_level']
         train_data = self.data[xgb_feas]
         target = self.data['user_values']
         print(train_data.shape)
@@ -142,12 +139,12 @@ class prevalue_model:
                 # 'min_samples_split': trial.suggest_int('min_samples_split', 2,7),
                 # 'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1,7),
 
-                # 'n_estimators': trial.suggest_int('n_estimators', 50, 100),
-                # 'max_depth': trial.suggest_int('max_depth', 3, 12),
-                # 'min_child_weight':trial.suggest_int('min_child_weight', 1, 10),
-                'subsample':trial.suggest_float('subsample',0.9,1),
-                'colsample_bytree':trial.suggest_float('colsample_bytree',0.8,1),
-                'learning_rate': trial.suggest_float('learning_rate', 0.09, 0.1),
+                'n_estimators': trial.suggest_int('n_estimators', 80, 200),
+                'max_depth': trial.suggest_int('max_depth', 3, 8),
+                'min_child_weight':trial.suggest_int('min_child_weight', 1, 8),
+                # 'subsample':trial.suggest_float('subsample',0.9,1),
+                # 'colsample_bytree':trial.suggest_float('colsample_bytree',0.8,1),
+                # 'learning_rate': trial.suggest_float('learning_rate', 0.09, 0.1),
 
                 # 'n_neighbors':trial.suggest_int('n_neighbors',5,20),
                 # 'weights':trial.suggest_categorical('weights',['uniform','distance']),
@@ -177,12 +174,11 @@ class prevalue_model:
         data = self.data
         xgb = xgboost.XGBRegressor(random_state=30)
         target = data['user_values']
-        del_cols = ['user_values','buzy_callcounts']
-        for _col in data.columns:
-            if 'avg_' in _col or 'billadjust' in _col:
-                del_cols.append(_col)
+        del_cols = ['user_values']
+        # for _col in data.columns:
+        #     if 'avg_' in _col or 'billadjust' in _col:
+        #         del_cols.append(_col)
         train_data = data.drop(columns=del_cols)
-        print(len(train_data.columns))
         print(f'Start{datetime.datetime.now()}')
         sfs = SequentialFeatureSelector(estimator=xgb, n_features_to_select=25,scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)  # backward
         sfs.fit(train_data, target)
@@ -259,15 +255,15 @@ class prevalue_model:
         plt.show()
 
     def lazy_re(self):
-        xgb_feas = ['marriage_counts', 'adults_numbers_family', 'expect_income',
-                    'has_creditcard', 'totalemployed_months', 'activeusers_family',
-                    'dualband_capability', 'phonenetwork', 'newphoneuser', 'phone_usedays',
+        xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
+                    'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
-                    'roaming_callcounts', 'cost_percentchange_before_threemonth',
-                    'try_usedata_counts', 'complete_usedata_counts',
-                    'customerservice_callcounts', 'incomplete_minutes_PVC',
-                    'forward_callcounts', 'user_spend_limit', 'total_useminutes_lifecycle',
-                    'totalcost_lifecycle', 'value_level']
+                    'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
+                    'cost_percentchange_before_threemonth', 'complete_usedata_counts',
+                    'customerservice_callcounts', 'customerservice_useminutes',
+                    'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
+                    'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
+                    'value_level']
         train_data = self.data[xgb_feas]
         target = self.data['user_values']
         train = MinMaxScaler().fit_transform(train_data)
@@ -281,10 +277,10 @@ class prevalue_model:
         pass
 
     def run(self):
-        self.init_model()
+        # self.init_model()
         # self.sfs(cv=5)
-        # self.para_adjustment(score='mse',n_trials=100)
-        # self.lazy_re()
+        # self.para_adjustment(score='mse',n_trials=150)
+        self.lazy_re()
         # self.learning_curve_show(score='mse')
 
 

@@ -67,12 +67,12 @@ class analyzer:
 
     def data_clean(self,data_dic):
         data = data_dic
-        def outliers_iqr(col_data,zero_boundary):
+        def outliers_iqr(col_data,zero_boundary,multiple):
             Q1 = np.percentile(col_data, 25)
             Q3 = np.percentile(col_data, 75)
             IQR = Q3 - Q1
-            lower_bound = Q1 - 3 * IQR
-            upper_bound = Q3 + 3 * IQR
+            lower_bound = Q1 - multiple * IQR
+            upper_bound = Q3 + multiple * IQR
             normal_data = list()
             for i in col_data:
                 outliter_tag = False
@@ -109,7 +109,6 @@ class analyzer:
                 v.loc[v['marriage_counts']==-1,'marriage_counts'] = 0
                 v.loc[v['region']==-1,'region'] = 18
                 v.loc[v['activeusers_family'] > 10, 'activeusers_family'] = 10
-
                 v.loc[v['adults_numbers_family'].isin([-1,0]),'adults_numbers_family'] = v.loc[v['adults_numbers_family'].isin([-1,0]),'activeusers_family']
                 v.loc[v['adults_numbers_family']>6,'adults_numbers_family'] = 6
                 v.loc[v['adults_numbers_family'] <= 0, 'adults_numbers_family'] = v['adults_numbers_family'].median()
@@ -123,31 +122,31 @@ class analyzer:
                 v.loc[v['phonenetwork']== -1,'phonenetwork'] = v['phonenetwork'].mode()[0]
                 v.loc[v['phone_usedays']<=0,'phone_usedays'] = round(v['phone_usedays'].mean())
 
-            elif k == 'useractioninfo':
-                v['user_values'] = outliers_iqr(v['user_values'],True)
-                v['useminutes'] = outliers_iqr(v['useminutes'],False)
-                v['over_useminutes'] = outliers_iqr(v['over_useminutes'],False)
-                v['over_cost'] = outliers_iqr(v['over_cost'],False)
-                v['voicecost'] = outliers_iqr(v['voicecost'],False)
+            elif k == 'serviceuseageinfo':
+                v['user_values'] = outliers_iqr(v['user_values'],True,3)
+                v['useminutes'] = outliers_iqr(v['useminutes'],False,3)
+                v['over_useminutes'] = outliers_iqr(v['over_useminutes'],False,3)
+                v['over_cost'] = outliers_iqr(v['over_cost'],False,3)
+                v['voicecost'] = outliers_iqr(v['voicecost'],False,3)
                 v.loc[v['overdata_cost']<0,'overdata_cost'] = v['overdata_cost'].mode()[0]
                 v.loc[v['roaming_callcounts'] < 0, 'roaming_callcounts'] = v['roaming_callcounts'].mode()[0]
-                playminute2negpercent = round(np.mean(v.loc[(v['useminutes_percentchange_before_threemonth']>=-100)&(v['useminutes_percentchange_before_threemonth']<=0)]['useminutes_percentchange_before_threemonth']))
+                playminute2negpercent = round(np.mean(v.loc[(v['useminutes_percentchange_before_threemonth']>-100)&(v['useminutes_percentchange_before_threemonth']<=0)]['useminutes_percentchange_before_threemonth']))
                 playminute2pospercent = round(np.mean(v.loc[(v['useminutes_percentchange_before_threemonth']<=100)&(v['useminutes_percentchange_before_threemonth']>=0)]['useminutes_percentchange_before_threemonth']))
-                v.loc[v['useminutes_percentchange_before_threemonth'] < -100,'useminutes_percentchange_before_threemonth'] = playminute2negpercent
-                v.loc[v['useminutes_percentchange_before_threemonth'] > 100,'useminutes_percentchange_before_threemonth'] = playminute2pospercent
+                v.loc[v['useminutes_percentchange_before_threemonth'] <= -100,'useminutes_percentchange_before_threemonth'] = playminute2negpercent
+                v.loc[v['useminutes_percentchange_before_threemonth'] >= 100,'useminutes_percentchange_before_threemonth'] = playminute2pospercent
                 playcost2negpercent = round(np.mean(v.loc[
                                                           (v['cost_percentchange_before_threemonth'] >= -100) & (
                                                                       v[
                                                                           'cost_percentchange_before_threemonth'] <= 0)]['cost_percentchange_before_threemonth']))
                 playcost2pospercent = round(np.mean(v.loc[(v['cost_percentchange_before_threemonth'] <= 100) & (
                             v['cost_percentchange_before_threemonth'] >= 0)]['cost_percentchange_before_threemonth']))
-                v.loc[v['cost_percentchange_before_threemonth'] < -100, 'cost_percentchange_before_threemonth'] = playcost2negpercent
-                v.loc[v['cost_percentchange_before_threemonth'] > 100, 'cost_percentchange_before_threemonth'] = playcost2pospercent
-                v['answercounts'] = outliers_iqr(v['answercounts'],False)
-                v['inAndout_callcounts_PVC'] = outliers_iqr(v['inAndout_callcounts_PVC'],False)
-                v['incomplete_minutes_PVC'] = outliers_iqr(v['incomplete_minutes_PVC'],False)
-                v['callcounts_NPVC'] = outliers_iqr(v['callcounts_NPVC'],False)
-                v['drop_callcounts'] = outliers_iqr(v['drop_callcounts'],False)
+                v.loc[v['cost_percentchange_before_threemonth'] <= -100, 'cost_percentchange_before_threemonth'] = playcost2negpercent
+                v.loc[v['cost_percentchange_before_threemonth'] >= 100, 'cost_percentchange_before_threemonth'] = playcost2pospercent
+                v['answercounts'] = outliers_iqr(v['answercounts'],False,3)
+                v['inAndout_callcounts_PVC'] = outliers_iqr(v['inAndout_callcounts_PVC'],False,3)
+                v['incomplete_minutes_PVC'] = outliers_iqr(v['incomplete_minutes_PVC'],False,3)
+                v['callcounts_NPVC'] = outliers_iqr(v['callcounts_NPVC'],False,3)
+                v['drop_callcounts'] = outliers_iqr(v['drop_callcounts'],False,3)
 
             # print(v.describe().loc['count'])
             v.to_csv(rf'../data/{k}.csv',index=False)
@@ -264,7 +263,7 @@ class analyzer:
     def dim_analysis(self):
         def cut_level(data,x,interval):
             label_bins = [x for x in range(0, max(data[x]) + interval, interval)]
-            label_levels = pd.cut(dim_data[x], bins=label_bins, labels=False)
+            label_levels = pd.cut(data[x], bins=label_bins, labels=False)
             label_levels = label_levels +1
             return label_levels
 
@@ -276,24 +275,30 @@ class analyzer:
             elif value >= two_level:
                 value_level = 3
             return value_level
+
         dim_data = self.factor_analyzer('get_data')
         one_level = dim_data['user_values'].quantile(0.3)
         two_level = dim_data['user_values'].quantile(0.8)
         dim_data['value_level'] = dim_data['user_values'].apply(lambda x: get_value_level(x))
-        dim_data['phone_usedays_level'] = cut_level(dim_data,'phone_usedays',180)
+        dim_data['phone_usedays_level'] = cut_level(dim_data,'phone_usedays',365)
         dim_data['phoneprice_level'] = cut_level(dim_data,'phoneprice',499)
         dim_data['employed_level'] = cut_level(dim_data,'totalemployed_months',12)
         dim_data.loc[dim_data['employed_level']==6,'employed_level'] = 5
-        # for fa in [f'Factor{x+1}' for x in range(0,5)]:
-        #     print(fa)
-        #     a = dim_data.loc[dim_data['employed_level'].isin([3])]
-        #     b = dim_data.loc[dim_data['employed_level'].isin([4])]
-        #     print(np.mean(a[fa]))
-        #     print(np.mean(b[fa]))
-        #     print()
-        # self.show_bar(dim_data,'phone_usedays_level','Factor1')
-        # x_labels = 'phone_usedays_level'
-        # self.show_percent(dim_data,x=x_labels,hue='value_level')
+        for fa in [f'Factor{x+1}' for x in range(0,5)]:
+            print(fa)
+            a = dim_data.loc[(dim_data['employed_level']==3)]
+            b = dim_data.loc[(dim_data['employed_level']==4)]
+            # a = dim_data.loc[(dim_data['phone_usedays_level']==4)&(dim_data['value_level']==2)]
+            # b = dim_data.loc[(dim_data['phone_usedays_level']==5)&(dim_data['value_level']==2)]
+            print(np.mean(a[fa]))
+            print(np.mean(b[fa]))
+            print()
+        f
+        # self.show_bar(dim_data,'phone_usedays_level','Factor1','手机使用年数','增长系数')
+
+        x_labels = 'employed_level'
+        self.show_percent(dim_data,x=x_labels,hue='value_level')
+        f
         self.show_scatter(dim_data,x='adults_numbers_family',y='employed_level',hue='value_level')
 
         # sns.scatterplot(data = dim_data,x='phone_usedays',y='phoneprice',hue='value_level')
@@ -312,20 +317,29 @@ class analyzer:
         kmeans.fit(cluster_data)
         score = calinski_harabasz_score(cluster_data, kmeans.labels_)
         print("CH score:", score)
+        values_label =  kmeans.labels_ + 1
+        level_dic = {
+            1:2,
+            2:3,
+            3:1,
+        }
+        user_level = [level_dic[x] for x in values_label]
+        f
         self.data['kmeans_label'] = kmeans.labels_ + 1
         print(self.data['kmeans_label'].value_counts())
+
         a = self.data.groupby('kmeans_label')['user_values'].apply(lambda x:np.mean(x)).reset_index()
-        self.show_bar(a,'kmeans_label','user_values')
         for center in kmeans.cluster_centers_:
             print([round(x,4) for x in center])
 
-    def show_bar(self,data,x,y):
+
+    def show_bar(self,data,x,y,x_labs,y_labs):
         show_df = data.groupby(x)[y].apply(lambda x: round(x.mean(), 4)).reset_index()
         ax = sns.barplot(data=show_df, x=x, y=y)
         for index, row in show_df.iterrows():
             ax.text(row[x]-1, row[y], row[y], color='black', ha='center')
-        plt.xlabel('手机使用天数(半年)')
-        plt.ylabel('通话需求系数')
+        plt.xlabel(x_labs)
+        plt.ylabel(y_labs)
         plt.show()
 
     def show_percent(self,data, x, hue):
@@ -375,7 +389,7 @@ class analyzer:
         for index, row in show_df.iterrows():
             ax.text(row[x_label], row['percent'], row['percent'], color='black', ha='center')
         # plt.xlabel('用户在职年限(1年)')
-        plt.xlabel('手机使用天数(半年)')
+        plt.xlabel('用户在职年数')
         plt.ylabel('用户价值占比(%)')
         plt.legend(title='用户价值', loc='upper left')
         plt.show()
@@ -414,7 +428,6 @@ class analyzer:
 if __name__ == '__main__':
     type = 'local' #db local
     tele_analyzer = analyzer(type)
-
     """
         相关性分析
     """
@@ -428,6 +441,8 @@ if __name__ == '__main__':
         get_data 生成因子分数
     """
 
+    # tele_analyzer.kmeans_cluster()
+
     # tele_analyzer.factor_analyzer(action='get_info')
 
     """
@@ -435,4 +450,4 @@ if __name__ == '__main__':
     """
     tele_analyzer.dim_analysis()
 
-    # cleaner.data_explore()
+    # tele_analyzer.data_explore()

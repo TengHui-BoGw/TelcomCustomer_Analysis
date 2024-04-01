@@ -1,3 +1,5 @@
+import time
+
 from data_preprocess.telecom_analyzer import analyzer
 import datetime
 import numpy as np
@@ -5,9 +7,9 @@ import optuna
 import xgboost
 import lightgbm
 import catboost
-from sklearn.ensemble import RandomForestRegressor, StackingRegressor,ExtraTreesRegressor
+from sklearn.ensemble import RandomForestRegressor,ExtraTreesRegressor,GradientBoostingRegressor
 from sklearn.neighbors import KNeighborsRegressor
-from sklearn.linear_model import LinearRegression,Lasso
+from sklearn.linear_model import LinearRegression
 from lazypredict.Supervised import LazyRegressor
 import pandas as pd
 from sklearn.feature_selection import RFECV ,SelectFromModel,SequentialFeatureSelector
@@ -22,7 +24,8 @@ plt.rcParams["font.sans-serif"]=["SimHei"] #设置字体
 plt.rcParams['font.family'] = 'DejaVu Sans'
 
 class prevalue_model:
-    def __init__(self,data_type):
+    def __init__(self,models,data_type):
+        self.models = models
         self.data_type = data_type
         self.tele_analyzer = analyzer()
         self.data = self.load_data()
@@ -46,12 +49,7 @@ class prevalue_model:
         return data
 
 
-    def init_model(self):
-        print(self.data['user_values'].describe())
-        xgb = xgboost.XGBRegressor(random_state=30)
-        xgb_params = {'n_estimators': 131, 'max_depth': 8, 'min_child_weight': 8}
-        # xgb_params = {'n_estimators': 61, 'max_depth': 12, 'min_child_weight': 9, 'random_state': 30}
-        xgb.set_params(**xgb_params)
+    def init_model(self,model,all_run=None):
         target = self.data['user_values']
         xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
                     'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
@@ -63,17 +61,60 @@ class prevalue_model:
                     'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
                     'value_level']
         train_data = self.data[xgb_feas]
-        # train_data = self.data.drop(columns = 'user_values')
         scorer1 = make_scorer(mean_squared_error)
         scorer2 = make_scorer(r2_score)
         score_name1 = '均方根误差'
         score_name2 = 'R2'
-        print(datetime.datetime.now())
-        scores1 =cross_validate(xgb,train_data,target,cv=5,n_jobs=-1,scoring=scorer1,return_train_score=True)
-        scores2 =cross_validate(xgb,train_data,target,cv=5,n_jobs=-1,scoring=scorer2,return_train_score=True)
-        print(f"训练集{score_name1} {np.mean(np.sqrt(scores1['train_score']))}|测试集{score_name1} {np.mean(np.sqrt(scores1['test_score']))}")
-        print(f"训练集{score_name2} {np.mean(scores2['train_score'])}|测试集{score_name2} {np.mean(scores2['test_score'])}")
-        print(datetime.datetime.now())
+        if all_run:
+            model_name    = list()
+            train_r2_list = list()
+            test_r2_list  = list()
+            train_rmse_list = list()
+            test_rmse_list  = list()
+            token_times_list = list()
+            for k,v in self.models.items():
+                print(k)
+                model_name.append(k)
+                model = v.get('model')
+                start_t = time.time()
+                print(f'{k} Start {datetime.datetime.now()}')
+                scores1 = cross_validate(model, train_data, target, cv=5, n_jobs=-1, scoring=scorer1, return_train_score=True)
+                scores2 = cross_validate(model, train_data, target, cv=5, n_jobs=-1, scoring=scorer2, return_train_score=True)
+                train_rmse = round(np.mean(np.sqrt(scores1['train_score'])),4)
+                test_rmse = round(np.mean(np.sqrt(scores1['test_score'])),4)
+                train_r2  = round(np.mean(scores2['train_score']),4)
+                test_r2  = round(np.mean(scores2['test_score']),4)
+                train_r2_list.append(train_r2)
+                test_r2_list.append(test_r2)
+                train_rmse_list.append(train_rmse)
+                test_rmse_list.append(test_rmse)
+                print(
+                    f"训练集{score_name1} {train_rmse}|测试集{score_name1} {test_rmse}")
+                print(
+                    f"训练集{score_name2} {train_r2}|测试集{score_name2} {test_r2}")
+                end_t = time.time()
+                print(f'{k} End {datetime.datetime.now()}')
+                token_times = round(end_t - start_t,4)
+                token_times_list.append(token_times)
+                print()
+            save_df = pd.DataFrame()
+            save_df['Model'] = model_name
+            save_df['train_R2'] = train_r2_list
+            save_df['test_R2'] = test_r2_list
+            save_df['train_RMSE'] = train_rmse_list
+            save_df['test_RMSE'] = test_rmse_list
+            save_df['Token_times'] = token_times_list
+            save_df.to_csv('tmp/regressor_diff.csv',index=False)
+            print('file save Succ!!!')
+
+
+        else:
+            print(datetime.datetime.now())
+            scores1 =cross_validate(model,train_data,target,cv=5,n_jobs=-1,scoring=scorer1,return_train_score=True)
+            scores2 =cross_validate(model,train_data,target,cv=5,n_jobs=-1,scoring=scorer2,return_train_score=True)
+            print(f"训练集{score_name1} {np.mean(np.sqrt(scores1['train_score']))}|测试集{score_name1} {np.mean(np.sqrt(scores1['test_score']))}")
+            print(f"训练集{score_name2} {np.mean(scores2['train_score'])}|测试集{score_name2} {np.mean(scores2['test_score'])}")
+            print(datetime.datetime.now())
 
         # xgb.fit(train_data, target)
         # importance = xgb.feature_importances_
@@ -88,10 +129,7 @@ class prevalue_model:
         #     fealist.append(train_data.columns[indices[t]])
         #     feascore.append(importance[indices[t]])
 
-    def para_adjustment(self, score,n_trials):
-        model = xgboost.XGBRegressor()
-        # xgb_params = {'n_estimators': 61, 'max_depth': 12, 'min_child_weight': 9, 'random_state': 30}
-        # model.set_params(**xgb_params)
+    def para_adjustment(self,model, score,n_trials):
         xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
                     'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
@@ -175,9 +213,6 @@ class prevalue_model:
         xgb = xgboost.XGBRegressor(random_state=30)
         target = data['user_values']
         del_cols = ['user_values']
-        # for _col in data.columns:
-        #     if 'avg_' in _col or 'billadjust' in _col:
-        #         del_cols.append(_col)
         train_data = data.drop(columns=del_cols)
         print(f'Start{datetime.datetime.now()}')
         sfs = SequentialFeatureSelector(estimator=xgb, n_features_to_select=25,scoring='neg_mean_squared_error', cv=cv, n_jobs=-1)  # backward
@@ -195,21 +230,16 @@ class prevalue_model:
         print(
             f"训练集 {np.mean(np.sqrt(cv_scores['train_score']))}|测试集 {np.mean(np.sqrt(cv_scores['test_score']))}")
 
-    def learning_curve_show(self,score):
-        xgb_params = {'n_estimators': 93, 'max_depth': 11, 'min_child_weight': 4, 'random_state': 30,
-                      'subsample': 0.976057563697568, 'colsample_bytree': 0.910170458498438,
-                      'learning_rate': 0.09932554574732755}
-        model = xgboost.XGBRegressor()
-        model.set_params(**xgb_params)
-        xgb_feas = ['marriage_counts', 'adults_numbers_family', 'expect_income',
-                    'has_creditcard', 'totalemployed_months', 'activeusers_family',
-                    'dualband_capability', 'phonenetwork', 'newphoneuser', 'phone_usedays',
+    def learning_curve_show(self,model,score):
+        xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
+                    'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
-                    'roaming_callcounts', 'cost_percentchange_before_threemonth',
-                    'try_usedata_counts', 'complete_usedata_counts',
-                    'customerservice_callcounts', 'incomplete_minutes_PVC',
-                    'forward_callcounts', 'user_spend_limit', 'total_useminutes_lifecycle',
-                    'totalcost_lifecycle', 'value_level']
+                    'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
+                    'cost_percentchange_before_threemonth', 'complete_usedata_counts',
+                    'customerservice_callcounts', 'customerservice_useminutes',
+                    'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
+                    'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
+                    'value_level']
         train_data = self.data[xgb_feas]
         target = self.data['user_values']
 
@@ -277,30 +307,63 @@ class prevalue_model:
         pass
 
     def run(self):
-        # self.init_model()
+        self.init_model(model = self.models.get('knn')['model'],all_run=True)
         # self.sfs(cv=5)
         # self.para_adjustment(score='mse',n_trials=150)
-        self.lazy_re()
-        # self.learning_curve_show(score='mse')
+        # self.lazy_re()
+        # self.learning_curve_show(model = self.models.get('xgb')['model'],score='mse')
 
 
 def init_models():
     model_dic = dict()
     number = 3
-    xgb_params = {'n_estimators': 93, 'max_depth': 11, 'min_child_weight': 4, 'random_state': 30,
-                  'subsample': 0.976057563697568, 'colsample_bytree': 0.910170458498438,
-                  'learning_rate': 0.09932554574732755}
     xgb = xgboost.XGBRegressor()
+    etr = ExtraTreesRegressor()
+    lgb = lightgbm.LGBMRegressor()
+    rfr = RandomForestRegressor()
+    gbr = GradientBoostingRegressor()
+    knn = KNeighborsRegressor()
+    lr  = LinearRegression()
+
+    xgb_params = {'n_estimators': 131, 'max_depth': 8, 'min_child_weight': 8,'random_state': 30}
+    etr_params = {'random_state':30}
+    lgb_params = {'random_state':30}
+    rfr_params = {'random_state':30}
+    gbr_params = {'random_state':30}
+
     xgb.set_params(**xgb_params)
+    etr.set_params(**etr_params)
+    lgb.set_params(**lgb_params)
+    rfr.set_params(**rfr_params)
+    gbr.set_params(**gbr_params)
+
     model_dic['xgb'] =dict()
     model_dic['xgb']['number']=number
     model_dic['xgb']['model'] = xgb
+    model_dic['etr'] =dict()
+    model_dic['etr']['number']=number
+    model_dic['etr']['model'] = etr
+    model_dic['lgb'] = dict()
+    model_dic['lgb']['number'] = number
+    model_dic['lgb']['model'] = lgb
+    model_dic['rfr'] = dict()
+    model_dic['rfr']['number'] = number
+    model_dic['rfr']['model'] = rfr
+    model_dic['gbr'] = dict()
+    model_dic['gbr']['number'] = number
+    model_dic['gbr']['model'] = gbr
+    model_dic['knn'] = dict()
+    model_dic['knn']['number'] = number
+    model_dic['knn']['model'] = knn
+    model_dic['lr'] = dict()
+    model_dic['lr']['number'] = number
+    model_dic['lr']['model'] = lr
     return model_dic
 
 
 if __name__ == '__main__':
     models = init_models()
     data_type = 'factor_load'  # origin factor_load:载入因子得分
-    pre_model = prevalue_model(data_type=data_type)
+    pre_model = prevalue_model(models =models, data_type=data_type)
     pre_model.run()
     # pre_model.init_model()

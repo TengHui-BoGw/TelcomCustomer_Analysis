@@ -431,7 +431,7 @@ if __name__ == '__main__':
     """
         相关性分析
     """
-    # tele_analyzer.corr_analyzer()
+    tele_analyzer.corr_analyzer()
 
     """
         因子分析   
@@ -448,6 +448,6 @@ if __name__ == '__main__':
     """
         多维度分析
     """
-    tele_analyzer.dim_analysis()
+    # tele_analyzer.dim_analysis()
 
     # tele_analyzer.data_explore()

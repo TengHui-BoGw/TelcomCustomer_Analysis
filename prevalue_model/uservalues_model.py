@@ -304,10 +304,28 @@ class prevalue_model:
         result_df.to_csv('tmp/lazy_regressor_results.csv')
 
     def bagging_models(self):
-        pass
+        xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
+                    'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
+                    'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
+                    'roaming_callcounts', 'useminutes_percentchange_before_threemonth',
+                    'cost_percentchange_before_threemonth', 'complete_usedata_counts',
+                    'customerservice_callcounts', 'customerservice_useminutes',
+                    'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
+                    'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
+                    'value_level']
+        data = self.data[xgb_feas]
+        target = self.data['user_values']
+        cv = KFold(n_splits=5, shuffle=True, random_state=30)
+        for train_index, test_index in cv.split(data):
+            train_data = data[train_index]
+            test_data = data[test_index]
+            train_tar = target[train_index]
+            test_tar = target[test_index]
+
 
     def run(self):
         self.init_model(model = self.models.get('knn')['model'],all_run=True)
+        self.bagging_models()
         # self.sfs(cv=5)
         # self.para_adjustment(score='mse',n_trials=150)
         # self.lazy_re()
@@ -366,4 +384,3 @@ if __name__ == '__main__':
     data_type = 'factor_load'  # origin factor_load:载入因子得分
     pre_model = prevalue_model(models =models, data_type=data_type)
     pre_model.run()
-    # pre_model.init_model()

@@ -160,8 +160,14 @@ class analyzer:
         serviceuseage_cols.append('totalemployed_months')
         serviceuseage_cols.append('phoneprice')
         serviceuseage_cols.append('phone_usedays')
+        serviceuseage_cols.append('adults_numbers_family')
+        serviceuseage_cols.append('activeusers_family')
+        serviceuseage_cols.append('marriage_counts')
 
-        corr_matrix = self.data[serviceuseage_cols].corr()
+        tmp_cols = ['user_values','useminutes','inAndout_callcounts_PVC','incomplete_minutes_PVC'
+                    ,'answercounts','over_cost','voicecost','over_useminutes','phone_usedays']
+
+        corr_matrix = self.data[tmp_cols].corr()
         corr_matrix_df = pd.DataFrame(corr_matrix).set_index(corr_matrix.columns)
         feas_corr_dic = dict()
         for col in serviceuseage_cols:
@@ -187,7 +193,8 @@ class analyzer:
 
         plt.figure(figsize=(16, 12))
         sns.heatmap(corr_matrix_df, annot=True, cmap='coolwarm', fmt=".2f")
-        plt.title('Correlation Heatmap')
+        plt.title('相关系数热力图')
+        plt.xticks(rotation=30)
         plt.show()
 
         # fig = px.imshow(corr_matrix,
@@ -275,7 +282,6 @@ class analyzer:
             elif value >= two_level:
                 value_level = 3
             return value_level
-
         dim_data = self.factor_analyzer('get_data')
         one_level = dim_data['user_values'].quantile(0.3)
         two_level = dim_data['user_values'].quantile(0.8)
@@ -286,13 +292,15 @@ class analyzer:
         dim_data.loc[dim_data['employed_level']==6,'employed_level'] = 5
         for fa in [f'Factor{x+1}' for x in range(0,5)]:
             print(fa)
-            a = dim_data.loc[(dim_data['employed_level']==3)]
-            b = dim_data.loc[(dim_data['employed_level']==4)]
+            a = dim_data.loc[(dim_data['phone_usedays_level']==4)]
+            b = dim_data.loc[(dim_data['phone_usedays_level']==5)]
             # a = dim_data.loc[(dim_data['phone_usedays_level']==4)&(dim_data['value_level']==2)]
             # b = dim_data.loc[(dim_data['phone_usedays_level']==5)&(dim_data['value_level']==2)]
             print(np.mean(a[fa]))
             print(np.mean(b[fa]))
             print()
+        # print(dim_data.loc[dim_data['Factor5']>0,'user_values'])
+        print(dim_data['useminutes'].describe())
         f
         # self.show_bar(dim_data,'phone_usedays_level','Factor1','手机使用年数','增长系数')
 

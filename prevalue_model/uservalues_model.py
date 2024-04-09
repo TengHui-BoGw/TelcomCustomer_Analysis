@@ -1,3 +1,5 @@
+import json
+import random
 import time
 
 from data_preprocess.telecom_analyzer import analyzer
@@ -6,8 +8,7 @@ import numpy as np
 import optuna
 import xgboost
 import lightgbm
-import catboost
-from sklearn.ensemble import RandomForestRegressor,ExtraTreesRegressor,GradientBoostingRegressor
+from sklearn.ensemble import GradientBoostingRegressor,BaggingRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.linear_model import LinearRegression
 from lazypredict.Supervised import LazyRegressor
@@ -24,8 +25,11 @@ plt.rcParams["font.sans-serif"]=["SimHei"] #设置字体
 plt.rcParams['font.family'] = 'DejaVu Sans'
 
 class prevalue_model:
-    def __init__(self,models,data_type):
-        self.models = models
+    def __init__(self,data_type,iters,min_samples,min_features):
+        self.iters = iters
+        self.min_samples = min_samples
+        self.min_features = min_features
+        self.models = self.init_models()
         self.data_type = data_type
         self.tele_analyzer = analyzer()
         self.data = self.load_data()
@@ -41,6 +45,7 @@ class prevalue_model:
             return value_level
         if self.data_type =='origin':
             data = self.tele_analyzer.data
+
         elif self.data_type == 'factor_load':
             data = self.tele_analyzer.factor_analyzer('get_data')
         one_level = data['user_values'].quantile(0.3)
@@ -48,8 +53,40 @@ class prevalue_model:
         data['value_level'] = data['user_values'].apply(lambda x: get_value_level(x))
         return data
 
+    def init_models(self):
+        model_dic = dict()
+        xgb = xgboost.XGBRegressor()
+        lgb = lightgbm.LGBMRegressor()
+        gbr = GradientBoostingRegressor()
+        bgr = BaggingRegressor()
 
-    def init_model(self,model,all_run=None):
+        xgb_params = {'n_estimators': 131, 'max_depth': 8, 'min_child_weight': 8,
+                      'colsample_bytree': 0.9401840831296924, 'learning_rate': 0.10317074040093721, 'random_state': 30}
+        lgb_params = {'random_state': 30, 'verbosity': -1, 'num_leaves': 49, 'min_child_samples': 20,
+                      'n_estimators': 389, 'max_depth': 13}
+        gbr_params = {'random_state': 30, 'n_estimators': 288, 'max_depth': 10}
+        bgr_params = {'random_state': 30,'n_estimators': 97, 'max_samples': 0.9937681661021245, 'max_features': 0.9498173759873925}
+
+        xgb.set_params(**xgb_params)
+        lgb.set_params(**lgb_params)
+        gbr.set_params(**gbr_params)
+        bgr.set_params(**bgr_params)
+
+        model_dic['xgb'] = dict()
+        model_dic['xgb']['number'] = self.iters
+        model_dic['xgb']['model'] = xgb
+        model_dic['lgb'] = dict()
+        model_dic['lgb']['number'] = self.iters
+        model_dic['lgb']['model'] = lgb
+        model_dic['bgr'] = dict()
+        model_dic['bgr']['number'] = self.iters
+        model_dic['bgr']['model'] = bgr
+        model_dic['gbr'] = dict()
+        model_dic['gbr']['number'] = self.iters
+        model_dic['gbr']['model'] = gbr
+        return model_dic
+
+    def run_model(self,model,all_run=None):
         target = self.data['user_values']
         xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
                     'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
@@ -106,8 +143,6 @@ class prevalue_model:
             save_df['Token_times'] = token_times_list
             save_df.to_csv('tmp/regressor_diff.csv',index=False)
             print('file save Succ!!!')
-
-
         else:
             print(datetime.datetime.now())
             scores1 =cross_validate(model,train_data,target,cv=5,n_jobs=-1,scoring=scorer1,return_train_score=True)
@@ -129,7 +164,7 @@ class prevalue_model:
         #     fealist.append(train_data.columns[indices[t]])
         #     feascore.append(importance[indices[t]])
 
-    def para_adjustment(self,model, score,n_trials):
+    def para_adjustment(self,model,score,n_trials):
         xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
                     'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
@@ -143,22 +178,6 @@ class prevalue_model:
         target = self.data['user_values']
         print(train_data.shape)
         print(target.shape)
-        # if isinstance(model, xgboost.XGBRegressor):
-        #     model_name = 'xgb'
-        #     print(model_name)
-        #     train = data[xgb_feas]
-        # elif isinstance(model, catboost.CatBoostRegressor):
-        #     model_name = 'cat'
-        #     print(model_name)
-        #     train = data[cat_feas]
-        # elif isinstance(model, ExtraTreesRegressor):
-        #     model_name = 'etr'
-        #     print(model_name)
-        #     train = data[etr_feas]
-
-        # if isinstance(model,KNeighborsRegressor):
-        #     train = MinMaxScaler().fit_transform(data[knn_feas])
-
         if score == 'mse':
             def custom_mse(y_true, y_pred):
                 mse = mean_squared_error(y_true, y_pred, squared=False)
@@ -171,30 +190,29 @@ class prevalue_model:
 
         def objective(trial):
             params = {
-                # 'num_leaves': trial.suggest_int('num_leaves', 15,35),
-                # 'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 12,22),
+                # lgb
+                # 'num_leaves': trial.suggest_int('num_leaves', 20,50),
+                # 'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 15, 22),
+                # 'n_estimators': trial.suggest_int('n_estimators', 80, 400),
+                # 'max_depth': trial.suggest_int('max_depth', 3, 15),
 
-                # 'min_samples_split': trial.suggest_int('min_samples_split', 2,7),
-                # 'min_samples_leaf': trial.suggest_int('min_samples_leaf', 1,7),
 
-                'n_estimators': trial.suggest_int('n_estimators', 80, 200),
-                'max_depth': trial.suggest_int('max_depth', 3, 8),
-                'min_child_weight':trial.suggest_int('min_child_weight', 1, 8),
-                # 'subsample':trial.suggest_float('subsample',0.9,1),
+                # xgb
+                # 'n_estimators': trial.suggest_int('n_estimators', 80, 200),
+                # 'max_depth': trial.suggest_int('max_depth', 3, 8),
+                # 'min_child_weight':trial.suggest_int('min_child_weight', 1, 8),
                 # 'colsample_bytree':trial.suggest_float('colsample_bytree',0.8,1),
-                # 'learning_rate': trial.suggest_float('learning_rate', 0.09, 0.1),
+                # 'learning_rate': trial.suggest_float('learning_rate', 0.09,0.11),
 
-                # 'n_neighbors':trial.suggest_int('n_neighbors',5,20),
-                # 'weights':trial.suggest_categorical('weights',['uniform','distance']),
-                # 'metric':trial.suggest_categorical('metric',['euclidean','manhattan','chebyshev','minkowski','hamming']),
-                # 'algorithm':trial.suggest_categorical('algorithm',['auto','brute','ball_tree'])
+                # gbr
+                # 'n_estimators': trial.suggest_int('n_estimators', 80, 300),
+                # 'max_depth': trial.suggest_int('max_depth', 3, 10),
+                # 'min_samples_split':trial.suggest_int('min_samples_split', 1, 6),
 
-                # 'iterations':trial.suggest_int('iterations', 200, 600),
-                # 'depth':trial.suggest_int('depth', 3, 10),
-                # 'colsample_bylevel':trial.suggest_float('colsample_bylevel', 0.8,1),
-                # "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2, 20),
-                # 'subsample':trial.suggest_float('subsample', 0.8,1),
-                # 'learning_rate': trial.suggest_float('learning_rate', 0.01,0.08),
+                # bgr
+                'n_estimators': trial.suggest_int('n_estimators', 10, 100),
+                'max_samples': trial.suggest_float('max_samples', 0.8, 1),
+                'max_features': trial.suggest_float('max_features', 0.75, 1),
             }
             model.set_params(**params)
             scores = cross_validate(model, train_data, target, cv=5, scoring=scorer, n_jobs=-1)  # cv表示交叉验证的折数
@@ -303,7 +321,8 @@ class prevalue_model:
         result_df = pd.concat([models, predictions], axis=1)
         result_df.to_csv('tmp/lazy_regressor_results.csv')
 
-    def bagging_models(self):
+    def bagging_models(self,weights=None):
+        cv_cnt = 5
         xgb_feas = ['region', 'totalemployed_months', 'activeusers_family', 'credit_rating',
                     'phonenetwork', 'newphoneuser', 'phone_usedays', 'phoneprice',
                     'useminutes', 'over_useminutes', 'over_cost', 'overdata_cost',
@@ -313,74 +332,176 @@ class prevalue_model:
                     'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC',
                     'forward_callcounts', 'wait_callcounts', 'user_spend_limit',
                     'value_level']
-        data = self.data[xgb_feas]
-        target = self.data['user_values']
-        cv = KFold(n_splits=5, shuffle=True, random_state=30)
+        need_feas = xgb_feas + ['user_values']
+        data = self.data[need_feas]
+        scores_dic = dict()
+        for k1,v1 in self.models.items():
+            scores_dic[k1] = dict()
+            for i in range(cv_cnt):
+                i = i + 1
+                scores_dic[k1][i] = dict()
+                scores_dic[k1][i]['train_r2'] = list()
+                scores_dic[k1][i]['train_rmse'] = list()
+                scores_dic[k1][i]['test_r2'] = list()
+                scores_dic[k1][i]['test_rmse'] = list()
+
+        cv = KFold(n_splits=cv_cnt, shuffle=True, random_state=30)
+        test_models2score = dict() #记录每个模型的验证机平均预测值
+        train_models2score = dict()#记录每个模型的训练集平均预测值
+        all_test_r2 = list()
+        all_test_rmse = list()
+        cnt = 1
         for train_index, test_index in cv.split(data):
-            train_data = data[train_index]
-            test_data = data[test_index]
-            train_tar = target[train_index]
-            test_tar = target[test_index]
+            print(f'第{cnt}轮开始{datetime.datetime.now()}')
+            test_models_pre = dict()
+            train_models_pre = dict()
+            for p1, u1 in self.models.items():
+                test_models_pre[p1] = list()
+                train_models_pre[p1] = list()
+
+
+            train_data = data.iloc[train_index]
+            test_data = data.iloc[test_index]
+            for k2,v2 in self.models.items():
+                for t in range(v2.get('number')):
+                    n_iter = t + 1
+                    model = v2.get('model')
+                    # print(f'开始训练{k2}{n_iter}模型{datetime.datetime.now()}')
+                    # if n_iter==self.iters:
+                    #     train_samples_num = train_data.shape[0] * 1
+                    #     train_feas_num = round(len(xgb_feas) * 1)
+                    # else:
+                    #     seed = 18 + n_iter*5
+                    #     train_samples_num = train_data.shape[0] * self.max_samples
+                    #     train_feas_num = round(len(xgb_feas) * self.max_features)
+                    seed = 18 + n_iter * 5
+                    train_samples_num = train_data.shape[0] * self.min_samples
+                    train_feas_num = round(len(xgb_feas) * self.min_features)
+                    random.seed(seed)
+                    feas = random.sample(xgb_feas, random.choice(range(train_feas_num,len(xgb_feas)+1)))
+                    sample_data = train_data.sample(random.choice(range(int(train_samples_num),train_data.shape[0]+1)),random_state=seed)
+                    train = sample_data[feas]
+                    pre_train = train_data[feas]
+                    train_target = sample_data['user_values']
+                    test = test_data[feas]
+                    test_target = test_data['user_values']
+                    model.fit(train,train_target)
+
+                    # 训练集和验证机进行预测
+                    test_y_pred = model.predict(test)
+                    train_y_pred = model.predict(train)
+                    all_train_pred = model.predict(pre_train)
+
+                    test_models_pre[k2].append(list(test_y_pred))
+                    train_models_pre[k2].append(list(all_train_pred))
+
+                    test_r2 = r2_score(test_target, test_y_pred)
+                    test_rmse = np.sqrt(mean_squared_error(test_target, test_y_pred))
+                    train_r2 = r2_score(train_target, train_y_pred)
+                    train_rmse = np.sqrt(mean_squared_error(train_target, train_y_pred))
+                    scores_dic[k2][cnt]['train_r2'].append(round(train_r2,4))
+                    scores_dic[k2][cnt]['train_rmse'].append(round(train_rmse,4))
+                    scores_dic[k2][cnt]['test_r2'].append(round(test_r2,4))
+                    scores_dic[k2][cnt]['test_rmse'].append(round(test_rmse,4))
+                    # print(f"===========================train-r2:{round(train_r2,4)} train-rmse:{round(train_rmse,4)}")
+                    # print(f"===========================test-r2:{round(test_r2,4)} test-rmse:{round(test_rmse,4)}")
+                    # print(f'结束训练{k2}{n_iter}模型{datetime.datetime.now()}')
+                    # print()
+
+            for p2,u2 in test_models_pre.items():
+                tmp_arrays = np.array(u2)
+                test_mean = np.mean(tmp_arrays,axis=0)
+                test_r2_ = r2_score(test_mean, test_data['user_values'])
+                test_rmse_ = np.sqrt(mean_squared_error(test_mean, test_data['user_values']))
+                print(f'=================={p2} test r2:{test_r2_}')
+                print(f'=================={p2} test rmse:{test_rmse_}')
+                test_models2score[p2] = test_mean
+            print()
+            for p3, u3 in train_models_pre.items():
+                tmp_arrays = np.array(u3)
+                train_mean = np.mean(tmp_arrays, axis=0)
+                train_r2_ = r2_score(train_mean, train_data['user_values'])
+                train_rmse_ = np.sqrt(mean_squared_error(train_mean, train_data['user_values']))
+                print(f'=================={p3} train r2:{train_r2_}')
+                print(f'=================={p3} train rmse:{train_rmse_}')
+                train_models2score[p3] = train_mean
+            test_all = list()
+            train_all = list()
+            for t1,o1 in test_models2score.items():
+                if weights is not None:
+                    weight = weights[t1]
+                else:
+                    weight = 1/len(list(self.models.keys()))
+                tmp = o1*weight
+                test_all.append(tmp)
+            for t2,o2 in train_models2score.items():
+                if weights is not None:
+                    weight = weights[t1]
+                else:
+                    weight = 1 / len(list(self.models.keys()))
+                tmp = o2*weight
+                train_all.append(tmp)
+
+            tmp_arrays1 = np.array(test_all)
+            tmp_arrays2 = np.array(train_all)
+            test_pre_tmp = np.sum(tmp_arrays1, axis=0)
+            train_pre_tmp = np.sum(tmp_arrays2, axis=0)
+            test_r2_ = r2_score(test_pre_tmp, test_data['user_values'])
+            test_rmse_ = np.sqrt(mean_squared_error(test_pre_tmp, test_data['user_values']))
+            train_r2_ = r2_score(train_pre_tmp, train_data['user_values'])
+            train_rmse_ = np.sqrt(mean_squared_error(train_pre_tmp, train_data['user_values']))
+            all_test_r2.append(test_r2_)
+            all_test_rmse.append(test_rmse_)
+            print(f'================== ALLtest r2:{test_r2_}')
+            print(f'================== ALLtest rmse:{test_rmse_}')
+            print(f'================== ALLtrain r2:{train_r2_}')
+            print(f'================== ALLtrain rmse:{train_rmse_}')
+            print(f'第{cnt}轮结束{datetime.datetime.now()}')
+            print()
+            cnt = cnt + 1
+        print(f'验证集 R2:{np.mean(all_test_r2)},RMSE:{np.mean(all_test_rmse)}')
+        train_r2_scores = list()
+        train_rmse_scores = list()
+        test_r2_scores = list()
+        test_rmse_scores = list()
+        for k3,v3 in scores_dic.items():
+            for k4,v4 in v3.items():
+                train_r2_mean = np.mean(v4['train_r2'])
+                train_rmse_mean = np.mean(v4['train_rmse'])
+                test_r2_mean = np.mean(v4['test_r2'])
+                test_rmse_mean = np.mean(v4['test_rmse'])
+                train_r2_scores.append(train_r2_mean)
+                train_rmse_scores.append(train_rmse_mean)
+                test_r2_scores.append(test_r2_mean)
+                test_rmse_scores.append(test_rmse_mean)
+        # print(f"最终结果train r2:{np.mean(train_r2_scores)},train rmse:{np.mean(train_rmse_scores)}")
+        # print(f"最终结果test r2:{np.mean(test_r2_scores)},test rmse:{np.mean(test_rmse_scores)}")
+        with open('res/res.json', 'w') as json_file:
+            json.dump(scores_dic, json_file,indent=4, ensure_ascii=False)
+        print('保存文件成功!!! 查看目录res/res.json 查看模型训练详情')
 
 
     def run(self):
-        self.init_model(model = self.models.get('knn')['model'],all_run=True)
-        self.bagging_models()
+        # self.run_model(model = self.models.get('xgb')['model'],all_run=False)
+
+        weights_dic = dict()
+        weights_dic['xgb'] = 0.18
+        weights_dic['lgb'] = 0.18
+        weights_dic['bgr'] = 0.29
+        weights_dic['gbr'] = 0.35
+        self.bagging_models(weights=weights_dic)
+
         # self.sfs(cv=5)
-        # self.para_adjustment(score='mse',n_trials=150)
+        # self.para_adjustment(model=self.models.get('bgr')['model'],score='mse',n_trials=300)
         # self.lazy_re()
-        # self.learning_curve_show(model = self.models.get('xgb')['model'],score='mse')
+        # self.learning_curve_show(model = self.models.get('gbr')['model'],score='mse')
 
-
-def init_models():
-    model_dic = dict()
-    number = 3
-    xgb = xgboost.XGBRegressor()
-    etr = ExtraTreesRegressor()
-    lgb = lightgbm.LGBMRegressor()
-    rfr = RandomForestRegressor()
-    gbr = GradientBoostingRegressor()
-    knn = KNeighborsRegressor()
-    lr  = LinearRegression()
-
-    xgb_params = {'n_estimators': 131, 'max_depth': 8, 'min_child_weight': 8,'random_state': 30}
-    etr_params = {'random_state':30}
-    lgb_params = {'random_state':30}
-    rfr_params = {'random_state':30}
-    gbr_params = {'random_state':30}
-
-    xgb.set_params(**xgb_params)
-    etr.set_params(**etr_params)
-    lgb.set_params(**lgb_params)
-    rfr.set_params(**rfr_params)
-    gbr.set_params(**gbr_params)
-
-    model_dic['xgb'] =dict()
-    model_dic['xgb']['number']=number
-    model_dic['xgb']['model'] = xgb
-    model_dic['etr'] =dict()
-    model_dic['etr']['number']=number
-    model_dic['etr']['model'] = etr
-    model_dic['lgb'] = dict()
-    model_dic['lgb']['number'] = number
-    model_dic['lgb']['model'] = lgb
-    model_dic['rfr'] = dict()
-    model_dic['rfr']['number'] = number
-    model_dic['rfr']['model'] = rfr
-    model_dic['gbr'] = dict()
-    model_dic['gbr']['number'] = number
-    model_dic['gbr']['model'] = gbr
-    model_dic['knn'] = dict()
-    model_dic['knn']['number'] = number
-    model_dic['knn']['model'] = knn
-    model_dic['lr'] = dict()
-    model_dic['lr']['number'] = number
-    model_dic['lr']['model'] = lr
-    return model_dic
 
 
 if __name__ == '__main__':
-    models = init_models()
-    data_type = 'factor_load'  # origin factor_load:载入因子得分
-    pre_model = prevalue_model(models =models, data_type=data_type)
+    data_type = 'factor_load'  # origin factor_load: 载入因子得分
+    num = 5 # 每个基础模型的数量
+    smaples = 0.95
+    feas = 1
+    pre_model = prevalue_model(data_type=data_type,iters=num,min_samples=smaples,min_features=feas)
     pre_model.run()

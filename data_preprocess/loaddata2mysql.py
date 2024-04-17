@@ -71,7 +71,7 @@ def create_table():
 
 def load_csv2mysql():
     col_names = dict()
-    with open('../data/col_name.txt', 'r', encoding='utf8') as cnf:
+    with open('../data/clean_dir/col_name.txt', 'r', encoding='utf8') as cnf:
         for name in cnf.readlines():
             name = name.split('|')
             col_names[name[0]] = name[1].strip()

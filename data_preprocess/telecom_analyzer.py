@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
+import seaborn
 from sklearn.cluster import KMeans
 from sklearn.metrics import calinski_harabasz_score
 from base_utils import *
 import seaborn as sns
 import matplotlib.pyplot as plt
+from data_preprocess.helper import *
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from factor_analyzer.factor_analyzer import calculate_bartlett_sphericity, FactorAnalyzer, calculate_kmo
 import plotly.express as px
@@ -36,6 +38,14 @@ class analyzer:
             }
         df = data['userinfo'].merge(data['phoneinfo'],on='user_id').merge(data['serviceuseageinfo'],on='user_id')
         df = df.drop(columns='user_id')
+        # box_cols = ['user_values', 'useminutes', 'over_useminutes', 'over_cost', 'voicecost',
+        #             'inAndout_callcounts_PVC', 'incomplete_minutes_PVC', 'callcounts_NPVC']
+        # for a in box_cols:
+        #     plt.boxplot(df[a], whis=3)
+        #     plt.title('Boxplot with Custom IQR')
+        #     plt.xlabel(a)
+        #     plt.ylabel('Value')
+        #     plt.show()
         # df.to_csv(r'E:\课程作业\毕设\基于机器学习的电信用户价值分析与预测\clean.csv',index = False)
         return df
 
@@ -123,6 +133,8 @@ class analyzer:
                 v.loc[v['phone_usedays']<=0,'phone_usedays'] = round(v['phone_usedays'].mean())
 
             elif k == 'serviceuseageinfo':
+                v['useminutes_percentchange_before_threemonth_old'] = v['useminutes_percentchange_before_threemonth']
+                v['cost_percentchange_before_threemonth_old'] = v['cost_percentchange_before_threemonth']
                 v['user_values'] = outliers_iqr(v['user_values'],True,3)
                 v['useminutes'] = outliers_iqr(v['useminutes'],False,3)
                 v['over_useminutes'] = outliers_iqr(v['over_useminutes'],False,3)
@@ -149,7 +161,7 @@ class analyzer:
                 v['drop_callcounts'] = outliers_iqr(v['drop_callcounts'],False,3)
 
             # print(v.describe().loc['count'])
-            v.to_csv(rf'../data/{k}.csv',index=False)
+            # v.to_csv(rf'../data/{k}.csv',index=False)
         return data
 
     def corr_analyzer(self):
@@ -268,45 +280,50 @@ class analyzer:
 
 
     def dim_analysis(self):
-        def cut_level(data,x,interval):
-            label_bins = [x for x in range(0, max(data[x]) + interval, interval)]
-            label_levels = pd.cut(data[x], bins=label_bins, labels=False)
-            label_levels = label_levels +1
-            return label_levels
-
-        def get_value_level(value):
-            if value < one_level:
-                value_level = 1
-            elif value >= one_level and value < two_level:
-                value_level = 2
-            elif value >= two_level:
-                value_level = 3
-            return value_level
         dim_data = self.factor_analyzer('get_data')
         one_level = dim_data['user_values'].quantile(0.3)
         two_level = dim_data['user_values'].quantile(0.8)
-        dim_data['value_level'] = dim_data['user_values'].apply(lambda x: get_value_level(x))
+        dim_data['value_level'] = dim_data['user_values'].apply(lambda x: get_value_level(x,[one_level,two_level]))
         dim_data['phone_usedays_level'] = cut_level(dim_data,'phone_usedays',365)
         dim_data['phoneprice_level'] = cut_level(dim_data,'phoneprice',499)
         dim_data['employed_level'] = cut_level(dim_data,'totalemployed_months',12)
+        dim_data['useminute_level'] = cut_level(dim_data,'useminutes',180)
         dim_data.loc[dim_data['employed_level']==6,'employed_level'] = 5
+        dim_data.loc[dim_data['useminute_level']==14,'useminute_level'] = 13
+
+        # v['useminutes_percentchange_before_threemonth_old'] = v['useminutes_percentchange_before_threemonth']
+        # v['cost_percentchange_before_threemonth_old'] = v['cost_percentchange_before_threemonth']
+        # fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+        # sns.histplot(dim_data['cost_percentchange_before_threemonth_old'],bins=60,kde=True,ax=axes[0])
+        # sns.histplot(dim_data['cost_percentchange_before_threemonth'],bins=30,kde=True,ax=axes[1])
+        # axes[0].set_title('服务费用较3个月前变化百分比(清洗前)')
+        # axes[1].set_title('服务费用较3个月前变化百分比(清洗后)')
+        # plt.tight_layout()
+        # plt.show()
+
+        # sns.histplot(dim_data['phoneprice'],bins=30,kde=True)
+        # plt.title('手机价格直方图')
+        # plt.xlabel('手机价格')
+        # plt.ylabel('数量')
+        # plt.show()
+        f
+
+
         for fa in [f'Factor{x+1}' for x in range(0,5)]:
             print(fa)
-            a = dim_data.loc[(dim_data['phone_usedays_level']==4)]
-            b = dim_data.loc[(dim_data['phone_usedays_level']==5)]
+            a = dim_data.loc[(dim_data['useminute_level'].isin([10,11,12]))]
+            b = dim_data.loc[(dim_data['useminute_level']==13)]
             # a = dim_data.loc[(dim_data['phone_usedays_level']==4)&(dim_data['value_level']==2)]
             # b = dim_data.loc[(dim_data['phone_usedays_level']==5)&(dim_data['value_level']==2)]
             print(np.mean(a[fa]))
             print(np.mean(b[fa]))
             print()
-        # print(dim_data.loc[dim_data['Factor5']>0,'user_values'])
-        print(dim_data['useminutes'].describe())
-        f
-        # self.show_bar(dim_data,'phone_usedays_level','Factor1','手机使用年数','增长系数')
+        print(dim_data.loc[dim_data['Factor5']>0,'user_values'])
+        print(dim_data['useminute_level'].isnull().mean())
 
-        x_labels = 'employed_level'
+        self.show_bar(dim_data,'phone_usedays_level','Factor1','手机使用年数','增长系数')
+        x_labels = 'useminute_level'
         self.show_percent(dim_data,x=x_labels,hue='value_level')
-        f
         self.show_scatter(dim_data,x='adults_numbers_family',y='employed_level',hue='value_level')
 
         # sns.scatterplot(data = dim_data,x='phone_usedays',y='phoneprice',hue='value_level')
@@ -397,7 +414,7 @@ class analyzer:
         for index, row in show_df.iterrows():
             ax.text(row[x_label], row['percent'], row['percent'], color='black', ha='center')
         # plt.xlabel('用户在职年限(1年)')
-        plt.xlabel('用户在职年数')
+        plt.xlabel('使用服务分钟数(3h)')
         plt.ylabel('用户价值占比(%)')
         plt.legend(title='用户价值', loc='upper left')
         plt.show()
@@ -434,12 +451,12 @@ class analyzer:
 
 
 if __name__ == '__main__':
-    type = 'local' #db local
+    type = 'db' #db local
     tele_analyzer = analyzer(type)
     """
         相关性分析
     """
-    tele_analyzer.corr_analyzer()
+    # tele_analyzer.corr_analyzer()
 
     """
         因子分析   
@@ -456,6 +473,6 @@ if __name__ == '__main__':
     """
         多维度分析
     """
-    # tele_analyzer.dim_analysis()
+    tele_analyzer.dim_analysis()
 
     # tele_analyzer.data_explore()

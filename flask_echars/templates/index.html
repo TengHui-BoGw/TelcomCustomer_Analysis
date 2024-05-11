@@ -5,18 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多个图表示例</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+    </style>
 </head>
 <body>
-    <!-- 折线图容器 -->
-    <div id="line_chart" style="width: 200px; height: 150px;float: left;"></div>
-    <!-- 渲染折线图 -->
-    {{ line_chart|safe }}
-    <br>
-    <!-- 散点图容器 -->
-    <div id="scatter_chart" style="width: 200px; height: 150px;float: right;"></div>
-    <!-- 渲染散点图 -->
-    {{ scatter_chart|safe }}
-    <!-- 返回主页链接 -->
-    <p><a href="{{ host }}">返回主页</a></p>
+    <p style="color: white">可视化系统</p>
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+        <button type="submit" formaction="{{ url_for('hotcorr') }}">热力图可视化</button>
+        <button type="submit" formaction="{{ url_for('phoneshow') }}">手机维度可视化</button>
+        <button type="submit" formaction="{{ url_for('familyshow') }}">家庭维度可视化</button>
+        <button type="submit" formaction="{{ url_for('serviceuseshow') }}">服务使用维度可视化</button>
+    </form>
 </body>
 </html>

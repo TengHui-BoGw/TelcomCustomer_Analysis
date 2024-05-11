@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>家庭维度可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+        #container1 {
+            position: fixed; /* 使用固定定位 */
+            top: 35px; /* 距离页面顶部的距离 */
+            left: 0px; /* 距离页面右侧的距离 */
+            width: 45%;
+            height: 400px;
+        }
+        #container2 {
+            position: fixed; /* 使用固定定位 */
+            top: 35px; /* 距离页面顶部的距离 */
+            right: 0px; /* 距离页面右侧的距离 */
+            width: 45%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+    </form>
+    <div id="container1" ></div>
+    <div id="container2" ></div>
+    <script type="text/javascript">
+        var dom1 = document.getElementById("container1");
+        var myChart1 = echarts.init(dom1);
+        var data1 = {{ employed_data | tojson | safe }};
+        var option1 = {
+            title: {
+                text: '用户在职年数-价值用户占比折线图',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            legend: {
+                data: ['1', '2', '3'], // 每条折线的命名
+                left: 'left',
+                top: '8%',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                type: 'category',
+                data: data1.employed_x, // 设置 x 轴数据
+                name:'用户在职年数',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '用户占比（%）',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [{
+                name: '1', // 第一条折线的名称
+                data: data1.one, // 第一条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '2', // 第二条折线的名称
+                data: data1.two, // 第二条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '3', // 第三条折线的名称
+                data: data1.three, // 第三条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }]
+        };
+        if (option1 && typeof option1 === 'object') {
+            myChart1.setOption(option1);
+        }
+
+        var myChart2 = echarts.init(document.getElementById('container2'));
+        var data2 = {{ scatter_data | tojson | safe }};
+        var option2 = {
+            title: {
+                text: '高价值用户散点图',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                name:'用户家庭成人数',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }},
+            yAxis: {
+                name:'用户在职年数',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [{
+                name: '散点图',
+                type: 'scatter',
+                symbolSize: function (data) {
+                    // 散点的大小由第三个数值决定
+                    return data[2] * 100; // 假设散点大小是第三个数值的两倍
+                },
+                itemStyle: {
+                    color: 'lightgreen' // 设置散点的颜色为浅绿色
+                },
+                data: data2.data
+            }]
+        };
+        if (option2 && typeof option2 === 'object') {
+                    myChart2.setOption(option2);
+                }
+    </script>
+</body>
+</html>

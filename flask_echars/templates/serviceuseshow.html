@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>服务使用维度可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+        #container1 {
+            position: fixed; /* 使用固定定位 */
+            top: 35px; /* 距离页面顶部的距离 */
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            width: 66%;
+            height: 530px;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+    </form>
+    <div id="container1" ></div>
+    <script type="text/javascript">
+        var dom1 = document.getElementById("container1");
+        var myChart1 = echarts.init(dom1);
+        var data1 = {{ useminute_data | tojson | safe }};
+        var option1 = {
+            title: {
+                text: '服务使用-价值用户占比折线图',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            legend: {
+                data: ['1', '2', '3'], // 每条折线的命名
+                left: 'left',
+                top: '6%',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                type: 'category',
+                data: data1.useminute_x, // 设置 x 轴数据
+                name:'服务使用小时(h)',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '用户占比（%）',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [{
+                name: '1', // 第一条折线的名称
+                data: data1.one, // 第一条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '2', // 第二条折线的名称
+                data: data1.two, // 第二条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '3', // 第三条折线的名称
+                data: data1.three, // 第三条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }]
+        };
+        if (option1 && typeof option1 === 'object') {
+            myChart1.setOption(option1);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>手机维度可视化</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <style>
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+        #container1 {
+            position: fixed; /* 使用固定定位 */
+            top: 35px; /* 距离页面顶部的距离 */
+            left: 0px; /* 距离页面右侧的距离 */
+            width: 45%;
+            height: 350px;
+        }
+        #container2 {
+            position: fixed; /* 使用固定定位 */
+            top: 35px; /* 距离页面顶部的距离 */
+            right: 0px; /* 距离页面右侧的距离 */
+            width: 45%;
+            height: 350px;
+        }
+        #container3 {
+            position: fixed;
+            top:350px;
+            width: 45%;
+            height: 420px;
+            left: 0;
+            right: 0;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+    </form>
+    <div id="container1" ></div>
+    <div id="container2" ></div>
+    <div id="container3" ></div>
+    <script type="text/javascript">
+        var dom1 = document.getElementById("container1");
+        var myChart1 = echarts.init(dom1);
+        var data1 = {{ userphonedays | tojson | safe }};
+        var option1 = {
+            title: {
+                text: '用户等级-手机使用天数柱状图', // 设置柱状图标题
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                type: 'category',
+                data: data1.x, // 设置 x 轴数据
+                name:'用户价值等级',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value', // 设置 y 轴类型为值轴
+                name: '手机使用天数',
+                nameLocation: 'middle',
+                nameGap: 35,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [{
+                name: '销量', // 设置系列名称
+                type: 'bar', // 设置系列类型为柱状图
+                data: data1.y, // 设置柱状图数据
+                label: {
+                    show: true // 显示数据标签
+                }
+            }]
+        };
+        if (option1 && typeof option1 === 'object') {
+            myChart1.setOption(option1);
+        }
+
+
+        var dom2 = document.getElementById("container2");
+        var myChart2 = echarts.init(dom2);
+        var data2 = {{ useday_data | tojson | safe }};
+        var option2 = {
+            title: {
+                text: '手机使用年数-价值用户占比折线图',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            legend: {
+                data: ['1', '2', '3'], // 每条折线的命名
+                left: 'left',
+                top: '8%',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                type: 'category',
+                data: data2.usedays_x, // 设置 x 轴数据
+                name:'手机使用年数',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '用户占比（%）',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [{
+                name: '1', // 第一条折线的名称
+                data: data2.one, // 第一条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '2', // 第二条折线的名称
+                data: data2.two, // 第二条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }, {
+                name: '3', // 第三条折线的名称
+                data: data2.three, // 第三条折线的数据
+                type: 'line', // 指定图表的类型为折线图
+                label: {
+                    show: true // 显示数据标签
+                }
+            }]
+        };
+
+        if (option2 && typeof option2 === 'object') {
+            myChart2.setOption(option2);
+        }
+
+        var myChart3 = echarts.init(document.getElementById('container3'));
+        var data3 = {{ scatter_data | tojson | safe }};
+        var option3 = {
+            title: {
+                text: '手机使用天数-价格-散点图', // 设置散点图标题
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            legend: {
+                data: ['one', 'two', 'three'], // 每条折线的命名
+                right: '10%', // 图例水平位于图表右侧 10% 处
+                top: '10%',
+                textStyle: {
+                        color: 'white'
+                    }
+            },
+            xAxis: {
+                type: 'value', // 设置 x 轴类型为值轴
+                name:'手机使用天数',
+                nameLocation: 'middle',
+                nameGap: 25,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            yAxis: {
+                type: 'value', // 设置 y 轴类型为值轴
+                name: '手机价格',
+                nameLocation: 'middle',
+                nameGap: 40,
+                axisLabel: {
+                    textStyle: {
+                        color: 'white' // 设置刻度和标签的字体颜色为白色
+                    }
+                },
+                axisLine: {
+                    lineStyle: {
+                        color: 'white' // 设置轴线的颜色为白色
+                    }
+                }
+            },
+            series: [
+                // 第一组散点数据，颜色为红色
+                {
+                    name: 'one', // 设置系列名称
+                    type: 'scatter', // 设置系列类型为散点图
+                    data: data3.one, // 设置散点图数据
+                    symbolSize: 5,
+                    itemStyle: {
+                        color: 'red' // 设置散点颜色为红色
+                    }
+                },
+                // 第二组散点数据，颜色为绿色
+                {
+                    name: 'two', // 设置系列名称
+                    type: 'scatter', // 设置系列类型为散点图
+                    data: data3.two, // 设置散点图数据
+                    symbolSize: 5,
+                    itemStyle: {
+                        color: 'green' // 设置散点颜色为绿色
+                    }
+                },
+                // 第三组散点数据，颜色为蓝色
+                {
+                    name: 'three', // 设置系列名称
+                    type: 'scatter', // 设置系列类型为散点图
+                    data: data3.three, // 设置散点图数据
+                    symbolSize: 5,
+                    itemStyle: {
+                        color: 'blue' // 设置散点颜色为蓝色
+                    }
+                }
+            ]
+        };
+        if (option3 && typeof option3 === 'object') {
+                    myChart3.setOption(option3);
+                }
+    </script>
+</body>
+</html>

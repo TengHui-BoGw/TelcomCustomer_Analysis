@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en" style="height:100%">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        #container1 {
+            width: 1200px;
+            height: 600px;
+        }
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+    </style>
+</head>
+<body style="height:100%">
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+    </form>
+    <div id="container1"></div>
+    <div id="container2" style="width: 1200px; height: 900px;"></div>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script type="text/javascript">
+        var dom1 = document.getElementById("container1");
+        var myecharts1 = echarts.init(dom1);
+        // 获取后端传输数据
+        var x_list = [{% for item in corr_x %}'{{ item }}',{% endfor %}];
+        var y_list = [{% for item in corr_y %}'{{ item }}',{% endfor %}];
+        var data = [{% for item in cordata %}{{ item }},{% endfor %}];
+        // 对data进行形态转变
+        // 处理 0 值样式
+        data = data.map(function (item) {
+                  return [item[0], item[1], item[2] || '-'];
+               });
+        var option1 = null;
+        option1 = {
+            title: {
+            text: '相关系数热力图',
+            textStyle: {
+                color: 'white'
+            }
+            },
+            tooltip:{
+               position:'top'
+            },
+            grid:{
+               height:'50%',
+               top:'10%'
+            },
+            xAxis:{
+                type:'category',
+                data:x_list,
+                // 划分区域是否显示，类似于绘制的网格
+                splitArea:{
+                  show:true
+                },
+                boundaryGap:true,
+                axisTick:{
+                   alignWithLabel:true
+                },
+                axisLabel: {
+                    interval:0,
+                    rotate:30,
+                    textStyle: {
+                        fontSize: 9, // 设置字体大小为10px
+                        color: 'white'
+                    }
+                }
+            },
+            yAxis:{
+                type:'category',
+                data:y_list,
+                splitArea:{
+                   show:true
+                },
+                axisLabel: {
+                    textStyle: {
+                        fontSize: 9, // 设置字体大小为10px
+                        color: 'white'
+                    }
+                }
+            },
+            visualMap:{
+                min:-1,
+                max:1,
+                calculable:true,
+                orient:'horizontal',  //热力分布标签布局
+                left:'center',
+                top:'5%',
+                color: ['#f00', '#fff', '#00f']
+            },
+            series:[
+               {
+                  name:'相关系数热力图',
+                  type:'heatmap',
+                  data:data,
+                  label:{
+                     show:true    // 每个item上的标签，对应的聚合值
+                  },
+                  emphasis:{      // 高亮显示，设置阴影
+                     itemStyle:{
+                         shadowBlur: 10,
+                         shadowColor: 'rgba(0, 0, 0, 0.5)'
+                     }
+                  }
+               }
+            ]
+        };
+        if(option1 && typeof option1=='object'){
+            myecharts1.setOption(option1);
+        }
+
+        var dom2 = document.getElementById("container2");
+        var myecharts2 = echarts.init(dom2);
+        // 获取后端传输数据
+        var x_factor = [{% for item in factor_x %}'{{ item }}',{% endfor %}];
+        var y_factor = [{% for item in factor_y %}'{{ item }}',{% endfor %}];
+        var data_factor = [{% for item in factordata %}{{ item }},{% endfor %}];
+        // 对data进行形态转变
+        // 处理 0 值样式
+        data_factor = data_factor.map(function (item) {
+                  return [item[0], item[1], item[2] || '-'];
+               });
+        var option2 = null;
+        option2 = {
+            title: {
+            text: '因子热力图',
+            textStyle: {
+                color: 'white'
+            }
+            },
+            tooltip:{
+               position:'top'
+            },
+            grid:{
+               height:'50%',
+               top:'10%'
+            },
+            xAxis:{
+                type:'category',
+                data:x_factor,
+                // 划分区域是否显示，类似于绘制的网格
+                splitArea:{
+                  show:true
+                },
+                boundaryGap:true,
+                axisTick:{
+                   alignWithLabel:true
+                },
+                axisLabel: {
+                    interval:0,
+                    textStyle: {
+                        fontSize: 9, // 设置字体大小为10px
+                        color: 'white'
+                    }
+                }
+            },
+            yAxis:{
+                type:'category',
+                data:y_factor,
+                splitArea:{
+                   show:true
+                },
+                axisLabel: {
+                    textStyle: {
+                        fontSize: 9, // 设置字体大小为10px
+                        color: 'white'
+                    }
+                }
+            },
+            visualMap:{
+                min:-1,
+                max:1,
+                calculable:true,
+                orient:'horizontal',  //热力分布标签布局
+                left:'center',
+                top:'5%',
+                color: ['#f00', '#fff', '#00f']
+            },
+            series:[
+               {
+                  name:'因子热力图',
+                  type:'heatmap',
+                  data:data_factor,
+                  label:{
+                     show:true    // 每个item上的标签，对应的聚合值
+                  },
+                  emphasis:{      // 高亮显示，设置阴影
+                     itemStyle:{
+                         shadowBlur: 10,
+                         shadowColor: 'rgba(0, 0, 0, 0.5)'
+                     }
+                  }
+               }
+            ]
+        };
+        if(option2 && typeof option2=='object'){
+            myecharts2.setOption(option2);
+        }
+    </script>
+</body>
+</html>

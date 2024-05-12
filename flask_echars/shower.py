@@ -118,6 +118,13 @@ def serviceuseshow():
     }
     return render_template("serviceuseshow.html",useminute_data = useminute_data)
 
+@app.route("/modelshow")
+def modelshow():
+    df1 = pd.read_csv(r'E:\TelcomCustomer_Analysis\data\showdata\modelparams.csv')
+    modeldata = df1.to_dict(orient='records')
+    return render_template("modelshow.html",modeldata = modeldata)
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)

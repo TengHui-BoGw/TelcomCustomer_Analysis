@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>用户价值数据表格</title>
+    <style>
+        body {
+            background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
+            background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <form>
+        <button type="submit" formaction="{{ url_for('index') }}">首页</button>
+    </form>
+    <h2 style="color:white;">集成模型超参数调优</h2>
+    <table>
+        <tr>
+            <th>min_samples</th>
+            <th>min_features</th>
+            <th>xgb_num</th>
+            <th>lgb_num</th>
+            <th>gbr_num</th>
+            <th>bgr_num</th>
+            <th>RMSE</th>
+        </tr>
+        {% for row in modeldata %}
+        <tr style="color: white">
+            <td>{{ row['min_samples'] }}</td>
+            <td>{{ row['min_features'] }}</td>
+            <td>{{ row['xgb_num'] }}</td>
+            <td>{{ row['lgb_num'] }}</td>
+            <td>{{ row['gbr_num'] }}</td>
+            <td>{{ row['bgr_num'] }}</td>
+            <td>{{ row['RMSE'] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

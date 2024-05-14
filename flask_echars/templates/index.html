@@ -10,10 +10,22 @@
             background-image: url('https://img.zcool.cn/community/017d6a5c513b9ca801213f26c6f65d.png?x-oss-process=image/format,webp'); /* 设置背景图片的路径 */
             background-size: cover; /* 图片将被缩放以完全覆盖整个容器 */
         }
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            width: 200px; /* 设置按钮宽度 */
+            height: 40px; /* 设置按钮高度 */
+        }
     </style>
 </head>
 <body>
-    <p style="color: white">可视化系统</p>
     <form>
         <button type="submit" formaction="{{ url_for('index') }}">首页</button>
         <button type="submit" formaction="{{ url_for('hotcorr') }}">热力图可视化</button>

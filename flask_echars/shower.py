@@ -31,7 +31,6 @@ def hotcorr():
     for col in factor_df.columns:
         for idx, value in factor_df[col].items():
             factor_data.append([factor_df.columns.get_loc(col),idx, round(value, 4)])
-    print(factor_data)
     return render_template("hotcorr.html", corr_x=corr_x, corr_y=corr_y, cordata=cor_data,
                            factor_x =factor_x ,factor_y=factor_y, factordata=factor_data)
 
@@ -104,9 +103,7 @@ def familyshow():
 def serviceuseshow():
     df1 = pd.read_csv(r'E:\TelcomCustomer_Analysis\data\showdata\userminutes2useradio.csv')
     useminute_x = df1['useminute_level'].unique().tolist()
-    print(useminute_x)
     useminute_x = list(map(lambda x: x * 3, useminute_x))
-    print(useminute_x)
     one = df1.loc[df1['value_level'] == 1, 'percent'].values.tolist()
     two = df1.loc[df1['value_level'] == 2, 'percent'].values.tolist()
     three = df1.loc[df1['value_level'] == 3, 'percent'].values.tolist()
